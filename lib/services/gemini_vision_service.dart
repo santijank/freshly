@@ -11,7 +11,7 @@ class GeminiVisionService implements AiVisionService {
 
   GeminiVisionService({required String apiKey})
       : _model = GenerativeModel(
-          model: 'gemini-1.5-flash-latest',
+          model: 'gemini-2.0-flash',
           apiKey: apiKey,
           generationConfig: GenerationConfig(
             // Keep responses deterministic and compact

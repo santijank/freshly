@@ -4,15 +4,17 @@ workflows:
     max_build_duration: 60
     environment:
       flutter: stable
-      android_signing:
-        - keystore_reference
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
+      - name: Add Android platform
+        script: |
+          flutter create . --platforms android
       - name: Build APK
         script: flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/**/outputs/**/*.apk
+      - build/**/outputs/**/mapping.txt
     publishing:
       email:
         recipients:

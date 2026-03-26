@@ -4,11 +4,7 @@ workflows:
     max_build_duration: 60
     environment:
       flutter: stable
-      vars:
-        GROQ_API_KEY: $GROQ_API_KEY
     scripts:
-      - name: Create .env file
-        script: echo "GROQ_API_KEY=$GROQ_API_KEY" > .env
       - name: Get Flutter packages
         script: flutter pub get
       - name: Add Android platform

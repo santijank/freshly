@@ -23,7 +23,7 @@ class FreshlyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Freshly',
+      title: 'Freshly - ติดตามความสดใหม่',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       home: const MainShell(),
@@ -113,7 +113,7 @@ class _FreshlyNavBar extends StatelessWidget {
               _NavItem(
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home_rounded,
-                label: 'Home',
+                label: 'หน้าหลัก',
                 isActive: currentIndex == 0,
                 onTap: () => onTap(0),
               ),
@@ -121,7 +121,7 @@ class _FreshlyNavBar extends StatelessWidget {
               _NavItem(
                 icon: Icons.menu_book_outlined,
                 activeIcon: Icons.menu_book_rounded,
-                label: 'Recipes',
+                label: 'สูตรอาหาร',
                 isActive: currentIndex == 1,
                 onTap: () => onTap(2),
               ),

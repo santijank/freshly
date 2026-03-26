@@ -52,12 +52,12 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Good morning! 🌿',
+                'สวัสดีตอนเช้า! 🌿',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 2),
               Text(
-                'My Fridge',
+                'ตู้เย็นของฉัน',
                 style: Theme.of(context).textTheme.displayLarge,
               ),
             ],
@@ -92,13 +92,13 @@ class HomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Expiring Soon',
+                  'ใกล้หมดอายุ',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 TextButton(
                   onPressed: () {},
                   child: const Text(
-                    'See all',
+                    'ดูทั้งหมด',
                     style: TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
@@ -131,7 +131,7 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('All Items', style: Theme.of(context).textTheme.titleLarge),
+          Text('รายการทั้งหมด', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           ...sampleItems.map((item) => _ItemRow(item: item)),
         ],
@@ -184,8 +184,8 @@ class _ItemRow extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   item.daysLeft == 0
-                      ? 'Expires today'
-                      : 'Expires in ${item.daysLeft} days',
+                      ? 'หมดอายุวันนี้'
+                      : 'หมดอายุใน ${item.daysLeft} วัน',
                   style: TextStyle(fontSize: 12, color: _statusColor),
                 ),
               ],

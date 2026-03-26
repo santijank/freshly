@@ -7,37 +7,37 @@ class RecipesScreen extends StatelessWidget {
   static const List<_RecipeCard> _recipes = [
     _RecipeCard(
       emoji: '🥗',
-      title: 'Spinach Salad',
-      tag: 'Uses expiring items',
-      time: '10 min',
+      title: 'สลัดผักโขม',
+      tag: 'ใช้ของใกล้หมดอายุ',
+      time: '10 นาที',
       urgent: true,
     ),
     _RecipeCard(
       emoji: '🍲',
-      title: 'Veggie Stir-fry',
-      tag: 'Quick & Easy',
-      time: '20 min',
+      title: 'ผัดผักรวม',
+      tag: 'ง่ายและรวดเร็ว',
+      time: '20 นาที',
       urgent: false,
     ),
     _RecipeCard(
       emoji: '🥤',
-      title: 'Green Smoothie',
-      tag: 'Uses expiring items',
-      time: '5 min',
+      title: 'กรีนสมูทตี้',
+      tag: 'ใช้ของใกล้หมดอายุ',
+      time: '5 นาที',
       urgent: true,
     ),
     _RecipeCard(
       emoji: '🍳',
-      title: 'Avocado Toast',
-      tag: 'Breakfast',
-      time: '8 min',
+      title: 'อะโวคาโดโทสต์',
+      tag: 'อาหารเช้า',
+      time: '8 นาที',
       urgent: false,
     ),
     _RecipeCard(
       emoji: '🥣',
-      title: 'Yogurt Bowl',
-      tag: 'Uses expiring items',
-      time: '3 min',
+      title: 'โยเกิร์ตโบวล์',
+      tag: 'ใช้ของใกล้หมดอายุ',
+      time: '3 นาที',
       urgent: true,
     ),
   ];
@@ -73,12 +73,12 @@ class RecipesScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Recipes',
+            'สูตรอาหาร',
             style: Theme.of(context).textTheme.displayLarge,
           ),
           const SizedBox(height: 4),
           Text(
-            'Based on what\'s in your fridge',
+            'จากอาหารในตู้เย็นของคุณ',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
@@ -108,7 +108,7 @@ class RecipesScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Use Before They Expire',
+                    'ใช้ก่อนหมดอายุ',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -117,7 +117,7 @@ class RecipesScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    '3 recipes match your expiring items',
+                    '3 สูตรตรงกับอาหารที่ใกล้หมดอายุ',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 12,

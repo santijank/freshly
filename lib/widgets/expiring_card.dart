@@ -19,9 +19,9 @@ class ExpiringCard extends StatelessWidget {
   }
 
   String get _daysText {
-    if (item.daysLeft == 0) return 'Today!';
-    if (item.daysLeft == 1) return '1 day left';
-    return '${item.daysLeft} days left';
+    if (item.daysLeft == 0) return 'วันนี้!';
+    if (item.daysLeft == 1) return 'เหลือ 1 วัน';
+    return 'เหลือ ${item.daysLeft} วัน';
   }
 
   @override

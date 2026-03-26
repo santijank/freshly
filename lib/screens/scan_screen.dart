@@ -18,7 +18,7 @@ class _ScanScreenState extends State<ScanScreen>
   List<CameraDescription> _cameras = [];
   bool _isInitialized = false;
   bool _isScanning = false;
-  String _statusMessage = 'Point camera at your fridge or food item';
+  String _statusMessage = 'ส่องกล้องไปที่ตู้เย็นหรืออาหาร';
 
   final _analysisService = FoodAnalysisService(provider: AiProvider.groq);
 
@@ -69,7 +69,7 @@ class _ScanScreenState extends State<ScanScreen>
 
     setState(() {
       _isScanning = true;
-      _statusMessage = 'Capturing image...';
+      _statusMessage = 'กำลังถ่ายภาพ...';
     });
 
     try {
@@ -78,7 +78,7 @@ class _ScanScreenState extends State<ScanScreen>
       final imageFile = File(photo.path);
 
       if (!mounted) return;
-      setState(() => _statusMessage = 'Analyzing with AI...');
+      setState(() => _statusMessage = 'AI กำลังวิเคราะห์...');
 
       // 2. Send to AI vision service
       final result = await _analysisService.analyze(imageFile);
@@ -88,7 +88,7 @@ class _ScanScreenState extends State<ScanScreen>
       if (!result.success) {
         setState(() {
           _isScanning = false;
-          _statusMessage = 'Analysis failed. Try again.';
+          _statusMessage = 'วิเคราะห์ไม่สำเร็จ ลองใหม่อีกครั้ง';
         });
         _showErrorSnack(result.errorMessage ?? 'Unknown error');
         return;
@@ -97,8 +97,8 @@ class _ScanScreenState extends State<ScanScreen>
       setState(() {
         _isScanning = false;
         _statusMessage = result.items.isEmpty
-            ? 'No food detected. Try again.'
-            : '${result.confirmedItems.length} item(s) found!';
+            ? 'ไม่พบอาหาร ลองใหม่อีกครั้ง'
+            : 'พบ ${result.confirmedItems.length} รายการ!';
       });
 
       // 3. Show result sheet — confirmed items + uncertain items needing input
@@ -109,7 +109,7 @@ class _ScanScreenState extends State<ScanScreen>
       if (!mounted) return;
       setState(() {
         _isScanning = false;
-        _statusMessage = 'Something went wrong. Try again.';
+        _statusMessage = 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง';
       });
       _showErrorSnack(e.toString());
     }
@@ -168,7 +168,7 @@ class _ScanScreenState extends State<ScanScreen>
                   icon: const Icon(Icons.close, color: Colors.white, size: 28),
                 ),
                 const Text(
-                  'Scan Food',
+                  'สแกนอาหาร',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -370,7 +370,7 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
                   const Text('🔍 ',
                       style: TextStyle(fontSize: 20)),
                   Text(
-                    'Scan Results',
+                    'ผลการสแกน',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const Spacer(),
@@ -382,7 +382,7 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${widget.result.items.length} items',
+                      '${widget.result.items.length} รายการ',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -403,7 +403,7 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
                   if (confirmed.isNotEmpty) ...[
                     const _SectionLabel(
                       icon: Icons.check_circle_outline_rounded,
-                      label: 'Detected Items',
+                      label: 'รายการที่พบ',
                       color: AppColors.primary,
                     ),
                     const SizedBox(height: 8),
@@ -417,7 +417,7 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
                   if (uncertain.isNotEmpty) ...[
                     const _SectionLabel(
                       icon: Icons.help_outline_rounded,
-                      label: 'Uncertain — Please identify',
+                      label: 'ไม่แน่ใจ — กรุณาระบุ',
                       color: AppColors.warning,
                     ),
                     const SizedBox(height: 8),
@@ -446,7 +446,7 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
                         ),
                       ),
                       child: Text(
-                        'Add ${widget.result.items.length} item(s) to Fridge',
+                        'เพิ่ม ${widget.result.items.length} รายการในตู้เย็น',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -467,7 +467,7 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
                         ),
                       ),
                       child: const Text(
-                        'Scan Again',
+                        'สแกนอีกครั้ง',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -547,8 +547,8 @@ class _ConfirmedItemRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final pct = (item.confidence * 100).round();
     final expiryText = item.estimatedExpiry != null
-        ? '~${item.daysUntilExpiry} days left'
-        : 'Expiry unknown';
+        ? 'เหลืออีก ~${item.daysUntilExpiry} วัน'
+        : 'ไม่ทราบวันหมดอายุ';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -682,7 +682,7 @@ class _UncertainItemRowState extends State<_UncertainItemRow> {
                   size: 18, color: AppColors.warning),
               const SizedBox(width: 8),
               Text(
-                'Item ${widget.index + 1} · ${widget.item.quantity}',
+                'รายการที่ ${widget.index + 1} · ${widget.item.quantity}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
@@ -694,7 +694,7 @@ class _UncertainItemRowState extends State<_UncertainItemRow> {
           if (widget.item.note != null) ...[
             const SizedBox(height: 4),
             Text(
-              'AI note: ${widget.item.note}',
+              'AI: ${widget.item.note}',
               style: const TextStyle(
                   fontSize: 12, color: AppColors.textSecondary),
             ),
@@ -703,7 +703,7 @@ class _UncertainItemRowState extends State<_UncertainItemRow> {
           TextField(
             controller: _controller,
             decoration: InputDecoration(
-              hintText: 'What is this item?',
+              hintText: 'นี่คืออะไร?',
               hintStyle:
                   const TextStyle(color: AppColors.textSecondary, fontSize: 14),
               contentPadding:

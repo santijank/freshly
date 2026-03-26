@@ -20,7 +20,7 @@ class _ScanScreenState extends State<ScanScreen>
   bool _isScanning = false;
   String _statusMessage = 'Point camera at your fridge or food item';
 
-  final _analysisService = FoodAnalysisService(provider: AiProvider.gemini);
+  final _analysisService = FoodAnalysisService(provider: AiProvider.groq);
 
   @override
   void initState() {

@@ -14,31 +14,31 @@ abstract class AiVisionService {
 
 /// System role — sets the AI persona
 const String kFoodAnalysisSystemPrompt =
-    'You are an expert food identification AI with deep knowledge of Thai and international foods. '
-    'You have excellent vision and can identify food items even in poor lighting, partial views, or blurry images. '
-    'You ALWAYS make your best identification attempt — you never give up. '
-    'You respond only in valid JSON format.';
+    'You are an expert food identification AI specializing in refrigerator and food storage analysis. '
+    'Your ONLY job is to identify FOOD and BEVERAGES — items that humans eat or drink. '
+    'You MUST ignore all non-food objects. You respond only in valid JSON format.';
 
 /// User prompt sent with the image
 const String kFoodAnalysisPrompt = '''
-Carefully examine this image and identify EVERY visible food item.
+Examine this image and identify ONLY food and beverage items.
 
-IMPORTANT RULES:
-1. ALWAYS give your best guess — even if unsure, describe by color/shape/packaging (e.g. "ขวดซอสสีแดง", "ถุงผักสีเขียว")
-2. Only use "ไม่แน่ใจ" when you truly cannot distinguish food from non-food
-3. For packaged items: read labels, logos, or describe the packaging
-4. For fresh produce: identify by shape, color, texture
-5. Food names MUST be in Thai language
-6. Include partially visible items
+STRICT FOOD-ONLY RULES:
+1. ✅ INCLUDE: fresh produce, meat, dairy, eggs, beverages, sauces, condiments, packaged food, cooked food, snacks
+2. ❌ EXCLUDE: cleaning products, medicine, cosmetics, utensils, containers (unless they contain food), paper, keys, phones, or any non-edible object
+3. If an item is uncertain whether it is food → set "is_food": false and skip it
+4. For food items: ALWAYS give your best guess by color/shape/packaging (e.g. "ขวดซอสสีแดง", "ถุงผักสีเขียว")
+5. Only use "ไม่แน่ใจ" for food items you cannot identify clearly
+6. Food names MUST be in Thai language
 
 Return ONLY this JSON — no markdown, no explanation:
 
 {
   "items": [
     {
-      "name": "<ชื่ออาหารภาษาไทย — ถ้าไม่แน่ใจให้อธิบายลักษณะ เช่น 'ผักสีเขียวคล้ายผักชี'>",
+      "name": "<ชื่ออาหาร/เครื่องดื่มภาษาไทย>",
+      "is_food": true,
       "quantity": "<ปริมาณที่เห็น เช่น '~300g', 'ครึ่งขวด', '3 ชิ้น'>",
-      "estimated_expiry": "<วันหมดอายุ ISO-8601 หรือ '3 วัน' หรือ '1 สัปดาห์' — ละไว้ถ้าไม่ทราบ>",
+      "estimated_expiry": "<ISO-8601 หรือ '3 วัน' หรือ '1 สัปดาห์' — ละไว้ถ้าไม่ทราบ>",
       "confidence": <0.0–1.0>,
       "note": "<หมายเหตุสั้นๆ ถ้ามี>"
     }
@@ -71,6 +71,7 @@ ScanResult parseAiResponse(String raw) {
 
   final items = rawItems
       .whereType<Map<String, dynamic>>()
+      .where((e) => e['is_food'] != false) // กรองเฉพาะอาหาร
       .map(DetectedFoodItem.fromJson)
       .toList();
 

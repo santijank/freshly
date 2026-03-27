@@ -30,9 +30,9 @@ class DetectedFoodItem {
 
   /// Parse from the JSON object returned by the AI.
   factory DetectedFoodItem.fromJson(Map<String, dynamic> json) {
-    final rawName = (json['name'] as String?)?.trim() ?? 'Uncertain';
+    final rawName = (json['name'] as String?)?.trim() ?? 'ไม่แน่ใจ';
     final isUncertain =
-        rawName.toLowerCase() == 'uncertain' || rawName.isEmpty;
+        rawName.toLowerCase() == 'uncertain' || rawName == 'ไม่แน่ใจ' || rawName.isEmpty;
 
     DateTime? expiry;
     final expiryStr = json['estimated_expiry'] as String?;
@@ -41,8 +41,8 @@ class DetectedFoodItem {
     }
 
     return DetectedFoodItem(
-      name: isUncertain ? 'Uncertain' : rawName,
-      quantity: (json['quantity'] as String?)?.trim() ?? 'Unknown',
+      name: isUncertain ? 'ไม่แน่ใจ' : rawName,
+      quantity: (json['quantity'] as String?)?.trim() ?? 'ไม่ทราบ',
       estimatedExpiry: expiry,
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
       isUncertain: isUncertain,

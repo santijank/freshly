@@ -24,7 +24,7 @@ Return ONLY a valid JSON object in this exact schema — no markdown, no extra t
 {
   "items": [
     {
-      "name": "<food name in English, or 'Uncertain' if you cannot identify it>",
+      "name": "<food name in Thai, or 'ไม่แน่ใจ' if you cannot identify it>",
       "quantity": "<remaining quantity, e.g. '~300g', 'half full', '3 pieces'>",
       "estimated_expiry": "<ISO-8601 date OR relative like '3 days' OR '1 week' — omit field if unknown>",
       "confidence": <float 0.0–1.0>,
@@ -34,7 +34,8 @@ Return ONLY a valid JSON object in this exact schema — no markdown, no extra t
 }
 
 Rules:
-- Set "name" to "Uncertain" when confidence < 0.5 or you cannot identify the item.
+- Set "name" to "ไม่แน่ใจ" when confidence < 0.5 or you cannot identify the item.
+- Always respond with food names in Thai language.
 - Always include every visible food item, even partially visible ones.
 - For packaged goods, try to read the label; if unreadable, note it.
 - Do NOT include plates, cutlery, containers, or non-food objects.

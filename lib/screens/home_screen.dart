@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/food_item.dart';
+import '../models/fridge_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/expiring_card.dart';
 import '../widgets/freshness_gauge.dart';
@@ -7,38 +8,42 @@ import '../widgets/freshness_gauge.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  List<FoodItem> get _expiringSoon =>
-      sampleItems.where((i) => i.daysLeft <= 5).toList()
-        ..sort((a, b) => a.daysLeft.compareTo(b.daysLeft));
-
-  int get _overallScore {
-    if (sampleItems.isEmpty) return 0;
-    return sampleItems
-            .map((i) => i.freshnessScore)
-            .reduce((a, b) => a + b) ~/
-        sampleItems.length;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader(context)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: FreshnessGauge(score: _overallScore),
-              ),
+    return ListenableBuilder(
+      listenable: FridgeStore.instance,
+      builder: (context, _) {
+        final items = FridgeStore.instance.items;
+        final expiringSoon = items
+            .where((i) => i.daysLeft <= 5)
+            .toList()
+          ..sort((a, b) => a.daysLeft.compareTo(b.daysLeft));
+        final overallScore = items.isEmpty
+            ? 0
+            : items.map((i) => i.freshnessScore).reduce((a, b) => a + b) ~/
+                items.length;
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: _buildHeader(context)),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: FreshnessGauge(score: overallScore),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                    child: _buildExpiringSoon(context, expiringSoon)),
+                SliverToBoxAdapter(child: _buildAllItems(context, items)),
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
             ),
-            SliverToBoxAdapter(child: _buildExpiringSoon(context)),
-            SliverToBoxAdapter(child: _buildAllItems(context)),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -80,7 +85,8 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildExpiringSoon(BuildContext context) {
+  Widget _buildExpiringSoon(
+      BuildContext context, List<FoodItem> expiringSoon) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 0, 0),
       child: Column(
@@ -109,23 +115,32 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 170,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(right: 20),
-              itemCount: _expiringSoon.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) =>
-                  ExpiringCard(item: _expiringSoon[index]),
+          if (expiringSoon.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12, right: 20),
+              child: Text(
+                'ไม่มีรายการใกล้หมดอายุ 🎉',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            )
+          else
+            SizedBox(
+              height: 170,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(right: 20),
+                itemCount: expiringSoon.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) =>
+                    ExpiringCard(item: expiringSoon[index]),
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildAllItems(BuildContext context) {
+  Widget _buildAllItems(BuildContext context, List<FoodItem> items) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
@@ -133,7 +148,13 @@ class HomeScreen extends StatelessWidget {
         children: [
           Text('รายการทั้งหมด', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
-          ...sampleItems.map((item) => _ItemRow(item: item)),
+          if (items.isEmpty)
+            const Text(
+              'ยังไม่มีรายการ — กดสแกนเพื่อเพิ่มอาหาร',
+              style: TextStyle(color: AppColors.textSecondary),
+            )
+          else
+            ...items.map((item) => _ItemRow(item: item)),
         ],
       ),
     );

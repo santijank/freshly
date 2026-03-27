@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import '../models/fridge_store.dart';
 import '../models/scan_result.dart';
 import '../services/food_analysis_service.dart';
 import '../theme/app_theme.dart';
@@ -486,13 +487,12 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
   }
 
   void _onAddAll() {
-    // Apply user corrections to uncertain items before saving
+    // รวม confirmed + uncertain (พร้อม correction จากผู้ใช้)
     final allItems = [...widget.result.confirmedItems];
     final uncertain = widget.result.uncertainItems;
     for (var i = 0; i < uncertain.length; i++) {
       final correction = _userCorrections[i];
       if (correction != null && correction.trim().isNotEmpty) {
-        // Create a corrected copy — in a real app you'd update your store here
         allItems.add(DetectedFoodItem(
           name: correction.trim(),
           quantity: uncertain[i].quantity,
@@ -500,12 +500,25 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
           confidence: 1.0,
           isUncertain: false,
         ));
-      } else {
-        allItems.add(uncertain[i]); // keep as-is if user skipped
+      } else if (!uncertain[i].isUncertain) {
+        allItems.add(uncertain[i]);
       }
     }
-    // TODO: persist allItems to your local DB / state manager
+
+    // บันทึกลง FridgeStore → home screen จะอัปเดตอัตโนมัติ
+    FridgeStore.instance.addFromScan(allItems);
+
     Navigator.pop(context);
+
+    // แสดง snackbar ยืนยัน
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('เพิ่ม ${allItems.length} รายการในตู้เย็นแล้ว ✅'),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 }
 

@@ -441,6 +441,7 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
                           (e) => _UncertainItemRow(
                             item: e.value,
                             index: e.key,
+                            imageFile: widget.imageFile,
                             onNameChanged: (name) => setState(
                               () => _userCorrections[e.key] = name,
                             ),
@@ -660,11 +661,13 @@ class _ConfirmedItemRow extends StatelessWidget {
 class _UncertainItemRow extends StatefulWidget {
   final DetectedFoodItem item;
   final int index;
+  final File imageFile;
   final ValueChanged<String> onNameChanged;
 
   const _UncertainItemRow({
     required this.item,
     required this.index,
+    required this.imageFile,
     required this.onNameChanged,
   });
 
@@ -735,6 +738,18 @@ class _UncertainItemRowState extends State<_UncertainItemRow> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // รูปภาพที่ถ่าย — ให้เห็นว่ารายการนี้คืออะไร
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.file(
+              widget.imageFile,
+              width: double.infinity,
+              height: 160,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(height: 10),
+
           // Header
           Row(
             children: [

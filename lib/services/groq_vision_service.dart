@@ -6,7 +6,7 @@ import 'ai_vision_service.dart';
 
 class GroqVisionService implements AiVisionService {
   final String _apiKey;
-  static const _model = 'meta-llama/llama-4-scout-17b-16e-instruct';
+  static const _model = 'meta-llama/llama-4-maverick-17b-128e-instruct';
   static const _endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
   GroqVisionService({required String apiKey}) : _apiKey = apiKey;
@@ -28,6 +28,10 @@ class GroqVisionService implements AiVisionService {
       'model': _model,
       'messages': [
         {
+          'role': 'system',
+          'content': kFoodAnalysisSystemPrompt,
+        },
+        {
           'role': 'user',
           'content': [
             {'type': 'text', 'text': kFoodAnalysisPrompt},
@@ -38,8 +42,8 @@ class GroqVisionService implements AiVisionService {
           ],
         }
       ],
-      'temperature': 0.2,
-      'max_tokens': 2048,
+      'temperature': 0.1,
+      'max_tokens': 4096,
     });
 
     try {

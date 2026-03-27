@@ -12,34 +12,38 @@ abstract class AiVisionService {
 // Shared prompt & JSON parsing utilities
 // ─────────────────────────────────────────────
 
-/// The system prompt sent to every AI backend.
+/// System role — sets the AI persona
+const String kFoodAnalysisSystemPrompt =
+    'You are an expert food identification AI with deep knowledge of Thai and international foods. '
+    'You have excellent vision and can identify food items even in poor lighting, partial views, or blurry images. '
+    'You ALWAYS make your best identification attempt — you never give up. '
+    'You respond only in valid JSON format.';
+
+/// User prompt sent with the image
 const String kFoodAnalysisPrompt = '''
-You are a food freshness expert and computer vision assistant embedded in an
-eco-friendly food-tracking mobile app called "Freshly".
+Carefully examine this image and identify EVERY visible food item.
 
-Analyze the image provided and identify every visible food item.
+IMPORTANT RULES:
+1. ALWAYS give your best guess — even if unsure, describe by color/shape/packaging (e.g. "ขวดซอสสีแดง", "ถุงผักสีเขียว")
+2. Only use "ไม่แน่ใจ" when you truly cannot distinguish food from non-food
+3. For packaged items: read labels, logos, or describe the packaging
+4. For fresh produce: identify by shape, color, texture
+5. Food names MUST be in Thai language
+6. Include partially visible items
 
-Return ONLY a valid JSON object in this exact schema — no markdown, no extra text:
+Return ONLY this JSON — no markdown, no explanation:
 
 {
   "items": [
     {
-      "name": "<food name in Thai, or 'ไม่แน่ใจ' if you cannot identify it>",
-      "quantity": "<remaining quantity, e.g. '~300g', 'half full', '3 pieces'>",
-      "estimated_expiry": "<ISO-8601 date OR relative like '3 days' OR '1 week' — omit field if unknown>",
-      "confidence": <float 0.0–1.0>,
-      "note": "<optional short note, e.g. 'Could be broccoli or kale'>"
+      "name": "<ชื่ออาหารภาษาไทย — ถ้าไม่แน่ใจให้อธิบายลักษณะ เช่น 'ผักสีเขียวคล้ายผักชี'>",
+      "quantity": "<ปริมาณที่เห็น เช่น '~300g', 'ครึ่งขวด', '3 ชิ้น'>",
+      "estimated_expiry": "<วันหมดอายุ ISO-8601 หรือ '3 วัน' หรือ '1 สัปดาห์' — ละไว้ถ้าไม่ทราบ>",
+      "confidence": <0.0–1.0>,
+      "note": "<หมายเหตุสั้นๆ ถ้ามี>"
     }
   ]
 }
-
-Rules:
-- Set "name" to "ไม่แน่ใจ" when confidence < 0.5 or you cannot identify the item.
-- Always respond with food names in Thai language.
-- Always include every visible food item, even partially visible ones.
-- For packaged goods, try to read the label; if unreadable, note it.
-- Do NOT include plates, cutlery, containers, or non-food objects.
-- Do NOT wrap the JSON in code fences.
 ''';
 
 /// Parse the raw string from the AI into a [ScanResult].

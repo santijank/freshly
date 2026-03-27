@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'screens/home_screen.dart';
 import 'screens/recipes_screen.dart';
 import 'screens/scan_screen.dart';
+import 'screens/shopping_list_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -17,8 +18,36 @@ void main() {
   runApp(const FreshlyApp());
 }
 
-class FreshlyApp extends StatelessWidget {
+class FreshlyApp extends StatefulWidget {
   const FreshlyApp({super.key});
+
+  static _FreshlyAppState of(BuildContext context) {
+    return context.findAncestorStateOfType<_FreshlyAppState>()!;
+  }
+
+  @override
+  State<FreshlyApp> createState() => _FreshlyAppState();
+}
+
+class _FreshlyAppState extends State<FreshlyApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  void toggleTheme() {
+    setState(() {
+      _themeMode =
+          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    });
+    // Sync status bar brightness
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            _themeMode == ThemeMode.dark ? Brightness.light : Brightness.dark,
+      ),
+    );
+  }
+
+  bool get isDark => _themeMode == ThemeMode.dark;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +55,8 @@ class FreshlyApp extends StatelessWidget {
       title: 'Freshly - ติดตามความสดใหม่',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: _themeMode,
       home: const MainShell(),
     );
   }
@@ -44,6 +75,7 @@ class _MainShellState extends State<MainShell> {
   final List<Widget> _screens = const [
     HomeScreen(),
     RecipesScreen(),
+    ShoppingListScreen(),
   ];
 
   void _onNavTap(int index) {
@@ -52,7 +84,10 @@ class _MainShellState extends State<MainShell> {
       _openScan();
       return;
     }
-    setState(() => _currentIndex = index > 1 ? index - 1 : index);
+    // index mapping: 0=หน้าหลัก, 1=scan(center), 2=สูตรอาหาร, 3=ช็อปปิ้ง
+    // screens index:  0=HomeScreen,              1=RecipesScreen, 2=ShoppingListScreen
+    final screenIndex = index > 1 ? index - 1 : index;
+    setState(() => _currentIndex = screenIndex);
   }
 
   void _openScan() {
@@ -93,9 +128,12 @@ class _FreshlyNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = FreshlyApp.of(context).isDark;
+    final bgColor = isDark ? AppColorsDark.background : AppColors.background;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: bgColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -106,7 +144,7 @@ class _FreshlyNavBar extends StatelessWidget {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -117,7 +155,6 @@ class _FreshlyNavBar extends StatelessWidget {
                 isActive: currentIndex == 0,
                 onTap: () => onTap(0),
               ),
-              _ScanButton(onTap: () => onTap(1)),
               _NavItem(
                 icon: Icons.menu_book_outlined,
                 activeIcon: Icons.menu_book_rounded,
@@ -125,6 +162,15 @@ class _FreshlyNavBar extends StatelessWidget {
                 isActive: currentIndex == 1,
                 onTap: () => onTap(2),
               ),
+              _ScanButton(onTap: () => onTap(1)),
+              _NavItem(
+                icon: Icons.shopping_cart_outlined,
+                activeIcon: Icons.shopping_cart_rounded,
+                label: 'ช็อปปิ้ง',
+                isActive: currentIndex == 2,
+                onTap: () => onTap(3),
+              ),
+              _ThemeToggleButton(isDark: isDark),
             ],
           ),
         ),
@@ -154,7 +200,7 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 72,
+        width: 64,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -172,11 +218,8 @@ class _NavItem extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight:
-                    isActive ? FontWeight.w700 : FontWeight.w400,
-                color: isActive
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                color: isActive ? AppColors.primary : AppColors.textSecondary,
               ),
             ),
           ],
@@ -196,8 +239,8 @@ class _ScanButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 64,
-        height: 64,
+        width: 60,
+        height: 60,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
@@ -216,7 +259,47 @@ class _ScanButton extends StatelessWidget {
         child: const Icon(
           Icons.qr_code_scanner_rounded,
           color: Colors.white,
-          size: 28,
+          size: 26,
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeToggleButton extends StatelessWidget {
+  final bool isDark;
+
+  const _ThemeToggleButton({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => FreshlyApp.of(context).toggleTheme(),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 64,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_outlined,
+                key: ValueKey(isDark),
+                color: AppColors.textSecondary,
+                size: 26,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              isDark ? 'สว่าง' : 'มืด',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );

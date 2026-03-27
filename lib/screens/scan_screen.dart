@@ -1,8 +1,6 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 import '../models/fridge_store.dart';
 import '../models/scan_result.dart';
 import '../services/food_analysis_service.dart';
@@ -337,31 +335,6 @@ class _ScanResultSheet extends StatefulWidget {
 
 class _ScanResultSheetState extends State<_ScanResultSheet> {
   final Map<int, String> _userCorrections = {};
-  final FlutterTts _tts = FlutterTts();
-
-  @override
-  void initState() {
-    super.initState();
-    _setupTts();
-    // ถ้ามีรายการไม่แน่ใจ ให้ระบบถามอัตโนมัติหลัง sheet เปิด
-    if (widget.result.uncertainItems.isNotEmpty) {
-      Future.delayed(const Duration(milliseconds: 600), () {
-        _tts.speak('พบรายการที่ไม่แน่ใจ ${widget.result.uncertainItems.length} รายการ กรุณากดปุ่มไมค์แล้วบอกชื่ออาหาร');
-      });
-    }
-  }
-
-  Future<void> _setupTts() async {
-    await _tts.setLanguage('th-TH');
-    await _tts.setSpeechRate(0.5);
-    await _tts.setVolume(1.0);
-  }
-
-  @override
-  void dispose() {
-    _tts.stop();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -699,195 +672,156 @@ class _UncertainItemRow extends StatefulWidget {
 }
 
 class _UncertainItemRowState extends State<_UncertainItemRow> {
-  final SpeechToText _stt = SpeechToText();
-  final FlutterTts _tts = FlutterTts();
-  bool _isListening = false;
-  bool _sttAvailable = false;
-  String _recognizedName = '';
+  String _name = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _initStt();
-  }
-
-  Future<void> _initStt() async {
-    final available = await _stt.initialize(
-      onError: (_) => setState(() => _isListening = false),
+  Future<void> _showAskDialog() async {
+    final controller = TextEditingController(text: _name);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Text('❓ ', style: TextStyle(fontSize: 22)),
+            Expanded(
+              child: Text(
+                'รายการที่ ${widget.index + 1} คืออะไร?',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.item.note != null) ...[
+              Text(
+                'AI: ${widget.item.note}',
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 10),
+            ],
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'เช่น นม, แครอท, ไข่...',
+                hintStyle: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                prefixIcon: const Icon(Icons.edit_outlined,
+                    size: 18, color: AppColors.primary),
+              ),
+              onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('ข้าม',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('บันทึก'),
+          ),
+        ],
+      ),
     );
-    if (mounted) setState(() => _sttAvailable = available);
-  }
 
-  Future<void> _askAndListen() async {
-    if (!_sttAvailable) return;
-
-    // ระบบถามก่อน
-    await _tts.setLanguage('th-TH');
-    await _tts.setSpeechRate(0.5);
-    await _tts.speak('รายการที่ ${widget.index + 1} คืออะไร?');
-    await _tts.awaitSpeakCompletion(true);
-
-    // แล้วเริ่มฟัง
-    setState(() => _isListening = true);
-    await _stt.listen(
-      localeId: 'th_TH',
-      onResult: (result) {
-        if (result.finalResult) {
-          final name = result.recognizedWords.trim();
-          setState(() {
-            _recognizedName = name;
-            _isListening = false;
-          });
-          widget.onNameChanged(name);
-        } else {
-          setState(() => _recognizedName = result.recognizedWords);
-        }
-      },
-      listenFor: const Duration(seconds: 8),
-      pauseFor: const Duration(seconds: 2),
-    );
-  }
-
-  Future<void> _stopListening() async {
-    await _stt.stop();
-    setState(() => _isListening = false);
-  }
-
-  @override
-  void dispose() {
-    _stt.stop();
-    _tts.stop();
-    super.dispose();
+    if (result != null && result.isNotEmpty) {
+      setState(() => _name = result);
+      widget.onNameChanged(result);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: _isListening
-              ? AppColors.primary
-              : AppColors.warning.withOpacity(0.4),
-          width: _isListening ? 2 : 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.help_outline_rounded,
-                  size: 18, color: AppColors.warning),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'รายการที่ ${widget.index + 1} · ${widget.item.quantity}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
+    return GestureDetector(
+      onTap: _showAskDialog,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _name.isNotEmpty
+                ? AppColors.primary.withOpacity(0.5)
+                : AppColors.warning.withOpacity(0.4),
+            width: 1.5,
           ),
-          if (widget.item.note != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'AI: ${widget.item.note}',
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary),
-            ),
-          ],
-          const SizedBox(height: 12),
-
-          // ── แสดงชื่อที่รู้จำได้ ──
-          if (_recognizedName.isNotEmpty)
+        ),
+        child: Row(
+          children: [
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: _name.isNotEmpty
+                    ? AppColors.primary.withOpacity(0.1)
+                    : AppColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
+              child: Icon(
+                _name.isNotEmpty
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.help_outline_rounded,
+                color: _name.isNotEmpty
+                    ? AppColors.primary
+                    : AppColors.warning,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.check_circle_outline_rounded,
-                      size: 18, color: AppColors.primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _recognizedName,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
+                  Text(
+                    _name.isNotEmpty ? _name : 'ไม่แน่ใจ — กดเพื่อระบุ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: _name.isNotEmpty
+                          ? AppColors.textPrimary
+                          : AppColors.warning,
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() => _recognizedName = '');
-                      widget.onNameChanged('');
-                    },
-                    child: const Icon(Icons.close,
-                        size: 16, color: AppColors.textSecondary),
+                  const SizedBox(height: 2),
+                  Text(
+                    'รายการที่ ${widget.index + 1} · ${widget.item.quantity}',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary),
                   ),
                 ],
               ),
-            )
-          else
-            // ── ปุ่มไมค์ ──
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: _isListening ? _stopListening : _askAndListen,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isListening
-                      ? AppColors.danger
-                      : AppColors.surface,
-                  foregroundColor: _isListening
-                      ? Colors.white
-                      : AppColors.primary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: _isListening
-                          ? AppColors.danger
-                          : AppColors.primary.withOpacity(0.3),
-                    ),
-                  ),
-                ),
-                icon: Icon(
-                  _isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                  size: 20,
-                ),
-                label: Text(
-                  _isListening ? 'กำลังฟัง... (กดเพื่อหยุด)' : 'กดพูดบอกชื่ออาหาร',
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ),
             ),
-
-          // ── เส้นแสดงระดับเสียงขณะฟัง ──
-          if (_isListening) ...[
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              backgroundColor: AppColors.surface,
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
-              borderRadius: BorderRadius.circular(4),
-              minHeight: 3,
-            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppColors.textSecondary),
           ],
-        ],
+        ),
       ),
     );
   }

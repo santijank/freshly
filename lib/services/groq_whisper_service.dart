@@ -9,7 +9,7 @@ class GroqWhisperService {
   static const _endpoint =
       'https://api.groq.com/openai/v1/audio/transcriptions';
 
-  final Record _recorder = Record();
+  final AudioRecorder _recorder = AudioRecorder();
   bool _isRecording = false;
 
   bool get isRecording => _isRecording;
@@ -22,10 +22,12 @@ class GroqWhisperService {
     final path = '${dir.path}/voice_input.m4a';
 
     await _recorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        bitRate: 128000,
+        sampleRate: 44100,
+      ),
       path: path,
-      encoder: AudioEncoder.aacLc,
-      bitRate: 128000,
-      samplingRate: 44100,
     );
     _isRecording = true;
     return true;

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/fridge_store.dart';
 import '../models/scan_result.dart';
 import '../services/food_analysis_service.dart';
+import '../services/groq_whisper_service.dart';
 import '../theme/app_theme.dart';
 
 class ScanScreen extends StatefulWidget {
@@ -672,156 +673,187 @@ class _UncertainItemRow extends StatefulWidget {
 }
 
 class _UncertainItemRowState extends State<_UncertainItemRow> {
+  final _whisper = GroqWhisperService();
   String _name = '';
+  bool _isRecording = false;
+  bool _isTranscribing = false;
 
-  Future<void> _showAskDialog() async {
-    final controller = TextEditingController(text: _name);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardBg,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Text('❓ ', style: TextStyle(fontSize: 22)),
-            Expanded(
-              child: Text(
-                'รายการที่ ${widget.index + 1} คืออะไร?',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (widget.item.note != null) ...[
-              Text(
-                'AI: ${widget.item.note}',
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 10),
-            ],
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'เช่น นม, แครอท, ไข่...',
-                hintStyle: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 14),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
-                filled: true,
-                fillColor: AppColors.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: const Icon(Icons.edit_outlined,
-                    size: 18, color: AppColors.primary),
-              ),
-              onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, null),
-            child: const Text('ข้าม',
-                style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('บันทึก'),
-          ),
-        ],
-      ),
-    );
+  @override
+  void dispose() {
+    _whisper.dispose();
+    super.dispose();
+  }
 
-    if (result != null && result.isNotEmpty) {
-      setState(() => _name = result);
-      widget.onNameChanged(result);
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      // หยุดอัด → ส่ง Whisper
+      setState(() {
+        _isRecording = false;
+        _isTranscribing = true;
+      });
+      final text = await _whisper.stopAndTranscribe();
+      if (!mounted) return;
+      if (text != null && text.isNotEmpty) {
+        setState(() {
+          _name = text;
+          _isTranscribing = false;
+        });
+        widget.onNameChanged(text);
+      } else {
+        setState(() => _isTranscribing = false);
+      }
+    } else {
+      // เริ่มอัด
+      final ok = await _whisper.startRecording();
+      if (!mounted) return;
+      if (ok) setState(() => _isRecording = true);
     }
+  }
+
+  void _clearName() {
+    setState(() => _name = '');
+    widget.onNameChanged('');
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _showAskDialog,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: _name.isNotEmpty
-                ? AppColors.primary.withOpacity(0.5)
-                : AppColors.warning.withOpacity(0.4),
-            width: 1.5,
-          ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _isRecording
+              ? AppColors.danger
+              : _name.isNotEmpty
+                  ? AppColors.primary.withOpacity(0.5)
+                  : AppColors.warning.withOpacity(0.4),
+          width: _isRecording ? 2 : 1.5,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: _name.isNotEmpty
-                    ? AppColors.primary.withOpacity(0.1)
-                    : AppColors.warning.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Icon(
                 _name.isNotEmpty
                     ? Icons.check_circle_outline_rounded
                     : Icons.help_outline_rounded,
-                color: _name.isNotEmpty
-                    ? AppColors.primary
-                    : AppColors.warning,
-                size: 22,
+                size: 18,
+                color: _name.isNotEmpty ? AppColors.primary : AppColors.warning,
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _name.isNotEmpty ? _name : 'ไม่แน่ใจ — กดเพื่อระบุ',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: _name.isNotEmpty
-                          ? AppColors.textPrimary
-                          : AppColors.warning,
-                    ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'รายการที่ ${widget.index + 1} · ${widget.item.quantity}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppColors.textPrimary,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'รายการที่ ${widget.index + 1} · ${widget.item.quantity}',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+          if (widget.item.note != null) ...[
+            const SizedBox(height: 4),
+            Text('AI: ${widget.item.note}',
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textSecondary)),
+          ],
+          const SizedBox(height: 12),
+
+          // ชื่อที่รู้จำได้
+          if (_name.isNotEmpty) ...[
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline_rounded,
+                      size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(_name,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        )),
+                  ),
+                  GestureDetector(
+                    onTap: _clearName,
+                    child: const Icon(Icons.close,
+                        size: 16, color: AppColors.textSecondary),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                color: AppColors.textSecondary),
+          ] else ...[
+            // ปุ่มไมค์ + สถานะ
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _isTranscribing ? null : _toggleRecording,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isRecording
+                      ? AppColors.danger
+                      : AppColors.surface,
+                  foregroundColor: _isRecording
+                      ? Colors.white
+                      : AppColors.primary,
+                  disabledBackgroundColor: AppColors.surface,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: _isRecording
+                          ? AppColors.danger
+                          : AppColors.primary.withOpacity(0.3),
+                    ),
+                  ),
+                ),
+                icon: _isTranscribing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.primary),
+                      )
+                    : Icon(_isRecording
+                        ? Icons.stop_rounded
+                        : Icons.mic_rounded),
+                label: Text(
+                  _isTranscribing
+                      ? 'กำลังแปลงเสียง...'
+                      : _isRecording
+                          ? 'กำลังฟัง — กดเพื่อหยุด'
+                          : 'กดค้างพูดชื่ออาหาร',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            if (_isRecording) ...[
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                backgroundColor: AppColors.surface,
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppColors.danger),
+                borderRadius: BorderRadius.circular(4),
+                minHeight: 3,
+              ),
+            ],
           ],
-        ),
+        ],
       ),
     );
   }

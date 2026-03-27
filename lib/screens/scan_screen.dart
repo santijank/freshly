@@ -104,7 +104,7 @@ class _ScanScreenState extends State<ScanScreen>
 
       // 3. Show result sheet — confirmed items + uncertain items needing input
       if (result.items.isNotEmpty) {
-        _showResultSheet(result);
+        _showResultSheet(result, imageFile);
       }
     } catch (e) {
       if (!mounted) return;
@@ -126,12 +126,12 @@ class _ScanScreenState extends State<ScanScreen>
     );
   }
 
-  void _showResultSheet(ScanResult result) {
+  void _showResultSheet(ScanResult result, File imageFile) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _ScanResultSheet(result: result),
+      builder: (_) => _ScanResultSheet(result: result, imageFile: imageFile),
     );
   }
 
@@ -326,7 +326,8 @@ class _CornerPainter extends CustomPainter {
 
 class _ScanResultSheet extends StatefulWidget {
   final ScanResult result;
-  const _ScanResultSheet({required this.result});
+  final File imageFile;
+  const _ScanResultSheet({required this.result, required this.imageFile});
 
   @override
   State<_ScanResultSheet> createState() => _ScanResultSheetState();
@@ -392,6 +393,20 @@ class _ScanResultSheetState extends State<_ScanResultSheet> {
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // ── รูปที่ถ่าย ── ให้ผู้ใช้ดูและระบุรายการที่ไม่แน่ใจ
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.file(
+                  widget.imageFile,
+                  width: double.infinity,
+                  height: 200,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             const SizedBox(height: 8),

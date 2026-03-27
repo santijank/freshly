@@ -5,6 +5,41 @@ import '../theme/app_theme.dart';
 import '../widgets/expiring_card.dart';
 import '../widgets/freshness_gauge.dart';
 
+Future<void> _confirmReset(BuildContext context) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.cardBg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text('รีเซ็ตตู้เย็น?',
+          style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+      content: const Text(
+        'รายการอาหารทั้งหมดจะถูกลบออก ไม่สามารถกู้คืนได้',
+        style: TextStyle(color: AppColors.textSecondary),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('ยกเลิก',
+              style: TextStyle(color: AppColors.textSecondary)),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.danger,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text('รีเซ็ต'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) {
+    FridgeStore.instance.clearAll();
+  }
+}
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -67,18 +102,39 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.notifications_outlined,
-              color: AppColors.primary,
-              size: 22,
-            ),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => _confirmReset(context),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.danger.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.restart_alt_rounded,
+                    color: AppColors.danger,
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.notifications_outlined,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -36,6 +36,11 @@ class FridgeStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearAll() {
+    _items.clear();
+    notifyListeners();
+  }
+
   // ── helpers ─────────────────────────────────────────────────
 
   int _freshnessScore(int daysLeft) {

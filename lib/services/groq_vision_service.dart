@@ -6,7 +6,7 @@ import 'ai_vision_service.dart';
 
 class GroqVisionService implements AiVisionService {
   final String _apiKey;
-  static const _model = 'meta-llama/llama-4-maverick-17b-128e-instruct';
+  static const _model = 'meta-llama/llama-4-scout-17b-16e-instruct';
   static const _endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
   GroqVisionService({required String apiKey}) : _apiKey = apiKey;

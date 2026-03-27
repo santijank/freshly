@@ -9,9 +9,8 @@ class GroqWhisperService {
   static const _endpoint =
       'https://api.groq.com/openai/v1/audio/transcriptions';
 
-  final AudioRecorder _recorder = AudioRecorder();
+  final Record _recorder = Record();
   bool _isRecording = false;
-  String? _recordingPath;
 
   bool get isRecording => _isRecording;
 
@@ -20,15 +19,13 @@ class GroqWhisperService {
     if (!await _recorder.hasPermission()) return false;
 
     final dir = await getTemporaryDirectory();
-    _recordingPath = '${dir.path}/voice_input.m4a';
+    final path = '${dir.path}/voice_input.m4a';
 
     await _recorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        bitRate: 128000,
-        sampleRate: 44100,
-      ),
-      path: _recordingPath!,
+      path: path,
+      encoder: AudioEncoder.aacLc,
+      bitRate: 128000,
+      samplingRate: 44100,
     );
     _isRecording = true;
     return true;
@@ -47,7 +44,7 @@ class GroqWhisperService {
         'POST',
         Uri.parse(_endpoint),
       );
-      request.headers['Authorization'] = 'Bearer $_groqApiKey';
+      request.headers['Authorization'] = 'Bearer $groqApiKey';
       request.files.add(await http.MultipartFile.fromPath('file', path));
       request.fields['model'] = 'whisper-large-v3-turbo';
       request.fields['language'] = 'th';

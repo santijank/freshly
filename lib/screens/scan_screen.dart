@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import '../models/fridge_store.dart';
 import '../models/scan_result.dart';
 import '../services/food_analysis_service.dart';
@@ -334,8 +336,32 @@ class _ScanResultSheet extends StatefulWidget {
 }
 
 class _ScanResultSheetState extends State<_ScanResultSheet> {
-  // Tracks user-supplied names for uncertain items (index → name)
   final Map<int, String> _userCorrections = {};
+  final FlutterTts _tts = FlutterTts();
+
+  @override
+  void initState() {
+    super.initState();
+    _setupTts();
+    // ถ้ามีรายการไม่แน่ใจ ให้ระบบถามอัตโนมัติหลัง sheet เปิด
+    if (widget.result.uncertainItems.isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 600), () {
+        _tts.speak('พบรายการที่ไม่แน่ใจ ${widget.result.uncertainItems.length} รายการ กรุณากดปุ่มไมค์แล้วบอกชื่ออาหาร');
+      });
+    }
+  }
+
+  Future<void> _setupTts() async {
+    await _tts.setLanguage('th-TH');
+    await _tts.setSpeechRate(0.5);
+    await _tts.setVolume(1.0);
+  }
+
+  @override
+  void dispose() {
+    _tts.stop();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -673,18 +699,64 @@ class _UncertainItemRow extends StatefulWidget {
 }
 
 class _UncertainItemRowState extends State<_UncertainItemRow> {
-  late final TextEditingController _controller;
+  final SpeechToText _stt = SpeechToText();
+  final FlutterTts _tts = FlutterTts();
+  bool _isListening = false;
+  bool _sttAvailable = false;
+  String _recognizedName = '';
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
-    _controller.addListener(() => widget.onNameChanged(_controller.text));
+    _initStt();
+  }
+
+  Future<void> _initStt() async {
+    final available = await _stt.initialize(
+      onError: (_) => setState(() => _isListening = false),
+    );
+    if (mounted) setState(() => _sttAvailable = available);
+  }
+
+  Future<void> _askAndListen() async {
+    if (!_sttAvailable) return;
+
+    // ระบบถามก่อน
+    await _tts.setLanguage('th-TH');
+    await _tts.setSpeechRate(0.5);
+    await _tts.speak('รายการที่ ${widget.index + 1} คืออะไร?');
+    await _tts.awaitSpeakCompletion(true);
+
+    // แล้วเริ่มฟัง
+    setState(() => _isListening = true);
+    await _stt.listen(
+      localeId: 'th_TH',
+      onResult: (result) {
+        if (result.finalResult) {
+          final name = result.recognizedWords.trim();
+          setState(() {
+            _recognizedName = name;
+            _isListening = false;
+          });
+          widget.onNameChanged(name);
+        } else {
+          setState(() => _recognizedName = result.recognizedWords);
+        }
+      },
+      listenFor: const Duration(seconds: 8),
+      pauseFor: const Duration(seconds: 2),
+    );
+  }
+
+  Future<void> _stopListening() async {
+    await _stt.stop();
+    setState(() => _isListening = false);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _stt.stop();
+    _tts.stop();
     super.dispose();
   }
 
@@ -697,8 +769,10 @@ class _UncertainItemRowState extends State<_UncertainItemRow> {
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: AppColors.warning.withOpacity(0.4),
-          width: 1,
+          color: _isListening
+              ? AppColors.primary
+              : AppColors.warning.withOpacity(0.4),
+          width: _isListening ? 2 : 1,
         ),
       ),
       child: Column(
@@ -709,12 +783,14 @@ class _UncertainItemRowState extends State<_UncertainItemRow> {
               const Icon(Icons.help_outline_rounded,
                   size: 18, color: AppColors.warning),
               const SizedBox(width: 8),
-              Text(
-                'รายการที่ ${widget.index + 1} · ${widget.item.quantity}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: AppColors.textPrimary,
+              Expanded(
+                child: Text(
+                  'รายการที่ ${widget.index + 1} · ${widget.item.quantity}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
@@ -727,26 +803,90 @@ class _UncertainItemRowState extends State<_UncertainItemRow> {
                   fontSize: 12, color: AppColors.textSecondary),
             ),
           ],
-          const SizedBox(height: 10),
-          TextField(
-            controller: _controller,
-            decoration: InputDecoration(
-              hintText: 'นี่คืออะไร?',
-              hintStyle:
-                  const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(
+          const SizedBox(height: 12),
+
+          // ── แสดงชื่อที่รู้จำได้ ──
+          if (_recognizedName.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
               ),
-              suffixIcon: const Icon(Icons.edit_outlined,
-                  size: 18, color: AppColors.primary),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline_rounded,
+                      size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _recognizedName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() => _recognizedName = '');
+                      widget.onNameChanged('');
+                    },
+                    child: const Icon(Icons.close,
+                        size: 16, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            )
+          else
+            // ── ปุ่มไมค์ ──
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _isListening ? _stopListening : _askAndListen,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isListening
+                      ? AppColors.danger
+                      : AppColors.surface,
+                  foregroundColor: _isListening
+                      ? Colors.white
+                      : AppColors.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: _isListening
+                          ? AppColors.danger
+                          : AppColors.primary.withOpacity(0.3),
+                    ),
+                  ),
+                ),
+                icon: Icon(
+                  _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                  size: 20,
+                ),
+                label: Text(
+                  _isListening ? 'กำลังฟัง... (กดเพื่อหยุด)' : 'กดพูดบอกชื่ออาหาร',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ),
             ),
-            textCapitalization: TextCapitalization.words,
-          ),
+
+          // ── เส้นแสดงระดับเสียงขณะฟัง ──
+          if (_isListening) ...[
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              backgroundColor: AppColors.surface,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              borderRadius: BorderRadius.circular(4),
+              minHeight: 3,
+            ),
+          ],
         ],
       ),
     );

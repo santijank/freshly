@@ -81,6 +81,24 @@ class FoodItem {
     }
   }
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'emoji': emoji,
+        'expiryDate': expiryDate.toIso8601String(),
+        'freshnessScore': freshnessScore,
+        'category': category.index,
+      };
+
+  factory FoodItem.fromJson(Map<String, dynamic> json) => FoodItem(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        emoji: json['emoji'] as String,
+        expiryDate: DateTime.parse(json['expiryDate'] as String),
+        freshnessScore: json['freshnessScore'] as int,
+        category: FoodCategory.values[json['category'] as int? ?? 8],
+      );
+
   FoodItem copyWith({
     String? id,
     String? name,

@@ -1,13 +1,42 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'food_item.dart';
 import 'scan_result.dart';
 
-/// Simple in-memory store — single source of truth for fridge items.
+/// Persistent store — single source of truth for fridge items.
 class FridgeStore extends ChangeNotifier {
   FridgeStore._();
   static final FridgeStore instance = FridgeStore._();
 
-  final List<FoodItem> _items = [...sampleItems];
+  static const _kKey = 'fridge_items_v1';
+
+  final List<FoodItem> _items = [];
+  bool _loaded = false;
+
+  /// Load from disk once; call in main() before runApp.
+  Future<void> load() async {
+    if (_loaded) return;
+    _loaded = true;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_kKey);
+    if (raw != null && raw.isNotEmpty) {
+      _items.addAll(
+        raw.map((s) => FoodItem.fromJson(jsonDecode(s) as Map<String, dynamic>)),
+      );
+    } else {
+      _items.addAll(sampleItems); // first launch
+    }
+    notifyListeners();
+  }
+
+  Future<void> _save() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _kKey,
+      _items.map((i) => jsonEncode(i.toJson())).toList(),
+    );
+  }
 
   List<FoodItem> get items => List.unmodifiable(_items);
 
@@ -31,6 +60,7 @@ class FridgeStore extends ChangeNotifier {
       ));
     }
     notifyListeners();
+    _save();
   }
 
   /// Add an item manually without scanning.
@@ -54,6 +84,7 @@ class FridgeStore extends ChangeNotifier {
       category: detectedCategory,
     ));
     notifyListeners();
+    _save();
   }
 
   /// Edit an existing item by id.
@@ -81,16 +112,19 @@ class FridgeStore extends ChangeNotifier {
       category: newCategory,
     );
     notifyListeners();
+    _save();
   }
 
   void removeItem(String id) {
     _items.removeWhere((i) => i.id == id);
     notifyListeners();
+    _save();
   }
 
   void clearAll() {
     _items.clear();
     notifyListeners();
+    _save();
   }
 
   // ── helpers ─────────────────────────────────────────────────

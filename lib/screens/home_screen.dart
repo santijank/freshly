@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../models/food_item.dart';
@@ -5,6 +6,7 @@ import '../models/fridge_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/expiring_card.dart';
 import '../widgets/freshness_gauge.dart';
+import 'receipt_scan_screen.dart';
 
 Future<void> _confirmReset(BuildContext context) async {
   final confirmed = await showDialog<bool>(
@@ -36,6 +38,18 @@ Future<void> _confirmReset(BuildContext context) async {
   if (confirmed == true) {
     FridgeStore.instance.clearAll();
   }
+}
+
+Future<void> _openReceiptScan(BuildContext context) async {
+  final cameras = await availableCameras();
+  if (cameras.isEmpty) return;
+  if (!context.mounted) return;
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ReceiptScanScreen(camera: cameras.first),
+    ),
+  );
 }
 
 void _showAddItemSheet(BuildContext context) {
@@ -124,6 +138,13 @@ class HomeScreen extends StatelessWidget {
           ),
           Row(
             children: [
+              _HeaderButton(
+                icon: Icons.receipt_long_rounded,
+                color: AppColors.primary,
+                bgColor: AppColors.surface,
+                onTap: () => _openReceiptScan(context),
+              ),
+              const SizedBox(width: 8),
               _HeaderButton(
                 icon: Icons.dark_mode_outlined,
                 color: AppColors.primary,

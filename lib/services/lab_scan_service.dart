@@ -5,7 +5,7 @@ import '../models/health_metrics.dart';
 import '../models/user_profile.dart';
 
 class LabScanService {
-  static const _apiKey = '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';
+  static const _apiKey = String.fromEnvironment('GROQ_API_KEY');
   static const _endpoint = 'https://api.groq.com/openai/v1/chat/completions';
   static const _visionModel = 'meta-llama/llama-4-scout-17b-16e-instruct';
   static const _textModel = 'llama-3.3-70b-versatile';

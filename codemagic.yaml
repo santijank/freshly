@@ -11,7 +11,7 @@ workflows:
         script: |
           flutter create . --platforms android
       - name: Build APK
-        script: flutter build apk --release --no-tree-shake-icons
+        script: flutter build apk --release --no-tree-shake-icons --dart-define=GROQ_API_KEY=$GROQ_API_KEY
     artifacts:
       - build/**/outputs/**/*.apk
       - build/**/outputs/**/mapping.txt

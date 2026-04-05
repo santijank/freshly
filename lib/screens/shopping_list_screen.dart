@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/fridge_store.dart';
 import '../theme/app_theme.dart';
 
-const _groqApiKey = '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';
+const _groqApiKey = String.fromEnvironment('GROQ_API_KEY');
 const _groqModel = 'llama-3.3-70b-versatile';
 const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
 

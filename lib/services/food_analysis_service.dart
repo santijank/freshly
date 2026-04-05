@@ -3,7 +3,7 @@ import '../models/scan_result.dart';
 import 'ai_vision_service.dart';
 import 'groq_vision_service.dart';
 
-const groqApiKey = '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';
+const groqApiKey = String.fromEnvironment('GROQ_API_KEY');
 
 enum AiProvider { groq }
 

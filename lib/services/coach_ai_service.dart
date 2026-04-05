@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/health_store.dart';
 
 class CoachAiService {
-  static const _apiKey = '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';
+  static const _apiKey = String.fromEnvironment('GROQ_API_KEY');
   static const _endpoint = 'https://api.groq.com/openai/v1/chat/completions';
   static const _model = 'llama-3.3-70b-versatile';
 

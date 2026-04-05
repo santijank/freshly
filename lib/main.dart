@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models/fridge_store.dart';
+import 'models/health_store.dart';
 import 'models/meal_store.dart';
 import 'screens/coach_screen.dart';
+import 'screens/health_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/insights_screen.dart';
 import 'screens/log_meal_screen.dart';
@@ -14,6 +16,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FridgeStore.instance.load();
   await MealStore.instance.load();
+  await HealthStore.instance.load();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -68,6 +71,7 @@ class _NourishAppState extends State<NourishApp> {
           themeMode: _themeMode,
           routes: {
             '/main': (context) => const MainShell(),
+            '/health': (context) => const HealthScreen(),
           },
           home: hasProfile
               ? const MainShell()

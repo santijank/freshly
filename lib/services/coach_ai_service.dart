@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/health_store.dart';
 
 class CoachAiService {
   static const _apiKey = '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';
@@ -19,12 +20,25 @@ Rules:
 - Keep responses concise (2-4 sentences unless meal plan requested)
 ''';
 
+  /// Build additional lab context string from the latest lab report.
+  String _buildLabContext() {
+    final latestReport = HealthStore.instance.latestReport;
+    if (latestReport == null) return '';
+    final buf = StringBuffer();
+    buf.write('\n\nผลตรวจร่างกายล่าสุด (${latestReport.date.day}/${latestReport.date.month}/${latestReport.date.year}):\n');
+    for (final m in latestReport.metrics) {
+      buf.write('${m.nameThai}: ${m.value.toStringAsFixed(1)} ${m.unit} (${m.statusLabel})\n');
+    }
+    return buf.toString();
+  }
+
   Future<String> sendMessage(
     String message, {
     required String context,
   }) async {
+    final fullContext = context + _buildLabContext();
     final systemPrompt =
-        _systemPromptTemplate.replaceFirst('{context}', context);
+        _systemPromptTemplate.replaceFirst('{context}', fullContext);
 
     final body = jsonEncode({
       'model': _model,

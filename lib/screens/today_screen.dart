@@ -2,10 +2,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/health_metrics.dart';
+import '../models/health_store.dart';
 import '../models/meal_log.dart';
 import '../models/meal_store.dart';
 import '../services/coach_ai_service.dart';
 import '../theme/app_theme.dart';
+import 'health_screen.dart';
 
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
@@ -201,6 +204,29 @@ class _TodayScreenState extends State<TodayScreen> {
                       childCount: meals.length,
                     ),
                   ),
+                // ── Health card ──
+                SliverToBoxAdapter(
+                  child: ListenableBuilder(
+                    listenable: HealthStore.instance,
+                    builder: (ctx, _) {
+                      final latest = HealthStore.instance.latestReport;
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                        child: latest != null
+                            ? _HealthSummaryCard(
+                                report: latest,
+                                cardColor: cardColor,
+                                textPrimary: textPrimary,
+                                textSecondary: textSecondary,
+                              )
+                            : _AddHealthCard(
+                                cardColor: cardColor,
+                                textSecondary: textSecondary,
+                              ),
+                      );
+                    },
+                  ),
+                ),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -893,6 +919,231 @@ class _HealthStatsRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Health Summary Card (for Today screen) ─────────────────────────
+
+class _HealthSummaryCard extends StatelessWidget {
+  final LabReport report;
+  final Color cardColor;
+  final Color textPrimary;
+  final Color textSecondary;
+
+  const _HealthSummaryCard({
+    required this.report,
+    required this.cardColor,
+    required this.textPrimary,
+    required this.textSecondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Priority metrics to show: FBS, Cholesterol, LDL, HbA1c
+    const priority = [
+      'fasting blood sugar',
+      'fbs',
+      'total cholesterol',
+      'cholesterol',
+      'ldl',
+      'hba1c',
+    ];
+
+    final keyMetrics = <HealthMetric>[];
+    for (final p in priority) {
+      final match = report.metrics.where(
+        (m) => m.name.toLowerCase().contains(p),
+      );
+      if (match.isNotEmpty) keyMetrics.add(match.first);
+      if (keyMetrics.length >= 4) break;
+    }
+    // Fallback: show first 4 if priority finds nothing
+    if (keyMetrics.isEmpty) {
+      keyMetrics.addAll(report.metrics.take(4));
+    }
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HealthScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('❤️', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'ผลตรวจร่างกาย',
+                    style: GoogleFonts.nunito(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary,
+                    ),
+                  ),
+                ),
+                Text(
+                  'ดูทั้งหมด →',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            if (report.hasAbnormal) ...[
+              const SizedBox(height: 4),
+              Text(
+                '⚠️ มีค่าผิดปกติ ${report.abnormalMetrics.length} ค่า',
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: AppColors.warning,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: keyMetrics
+                    .map((m) => _MetricChip(metric: m))
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  final HealthMetric metric;
+  const _MetricChip({required this.metric});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: metric.statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: metric.statusColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            metric.nameThai,
+            style: GoogleFonts.nunito(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Text(
+                metric.value.toStringAsFixed(1),
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: metric.statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddHealthCard extends StatelessWidget {
+  final Color cardColor;
+  final Color textSecondary;
+
+  const _AddHealthCard({
+    required this.cardColor,
+    required this.textSecondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HealthScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.accent.withOpacity(0.5),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Text('🩺', style: TextStyle(fontSize: 28)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'เพิ่มผลตรวจเลือด',
+                    style: GoogleFonts.nunito(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    'สแกนเพื่อรับแผนอาหารเฉพาะตัวจาก AI',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                size: 16, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
     );
   }
 }

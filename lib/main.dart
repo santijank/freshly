@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models/fridge_store.dart';
+import 'models/meal_store.dart';
+import 'screens/coach_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/recipes_screen.dart';
-import 'screens/scan_screen.dart';
-import 'screens/shopping_list_screen.dart';
+import 'screens/insights_screen.dart';
+import 'screens/log_meal_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/today_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FridgeStore.instance.load();
+  await MealStore.instance.load();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -17,21 +21,21 @@ void main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-  runApp(const FreshlyApp());
+  runApp(const NourishApp());
 }
 
-class FreshlyApp extends StatefulWidget {
-  const FreshlyApp({super.key});
+class NourishApp extends StatefulWidget {
+  const NourishApp({super.key});
 
-  static _FreshlyAppState of(BuildContext context) {
-    return context.findAncestorStateOfType<_FreshlyAppState>()!;
+  static _NourishAppState of(BuildContext context) {
+    return context.findAncestorStateOfType<_NourishAppState>()!;
   }
 
   @override
-  State<FreshlyApp> createState() => _FreshlyAppState();
+  State<NourishApp> createState() => _NourishAppState();
 }
 
-class _FreshlyAppState extends State<FreshlyApp> {
+class _NourishAppState extends State<NourishApp> {
   ThemeMode _themeMode = ThemeMode.light;
 
   void toggleTheme() {
@@ -39,7 +43,6 @@ class _FreshlyAppState extends State<FreshlyApp> {
       _themeMode =
           _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
     });
-    // Sync status bar brightness
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -53,13 +56,24 @@ class _FreshlyAppState extends State<FreshlyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Freshly - ติดตามความสดใหม่',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: _themeMode,
-      home: const MainShell(),
+    return ListenableBuilder(
+      listenable: MealStore.instance,
+      builder: (context, _) {
+        final hasProfile = MealStore.instance.hasProfile;
+        return MaterialApp(
+          title: 'Nourish',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: _themeMode,
+          routes: {
+            '/main': (context) => const MainShell(),
+          },
+          home: hasProfile
+              ? const MainShell()
+              : const OnboardingScreen(),
+        );
+      },
     );
   }
 }
@@ -72,36 +86,29 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
+  // 0=Today, 1=Insights, 3=Fridge, 4=Coach
+  // Index 2 is center button (not a real tab)
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    RecipesScreen(),
-    ShoppingListScreen(),
+  // Screens mapped to tab indices (skip center button at visual index 2)
+  static const List<Widget> _screens = [
+    TodayScreen(),
+    InsightsScreen(),
+    HomeScreen(),   // Fridge
+    CoachScreen(),
   ];
 
-  void _onNavTap(int index) {
-    if (index == 1) {
-      // Center scan button
-      _openScan();
+  void _onNavTap(int visualIndex) {
+    if (visualIndex == 2) {
+      // Center button — open log meal sheet
+      showLogMealSheet(context);
       return;
     }
-    // index mapping: 0=หน้าหลัก, 1=scan(center), 2=สูตรอาหาร, 3=ช็อปปิ้ง
-    // screens index:  0=HomeScreen,              1=RecipesScreen, 2=ShoppingListScreen
-    final screenIndex = index > 1 ? index - 1 : index;
+    // Map visual indices to screen indices
+    // Visual: 0=วันนี้, 1=สถิติ, 2=+(center), 3=ตู้เย็น, 4=โค้ช
+    // Screen: 0, 1, -, 2, 3
+    final screenIndex = visualIndex < 2 ? visualIndex : visualIndex - 1;
     setState(() => _currentIndex = screenIndex);
-  }
-
-  void _openScan() {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) => const ScanScreen(),
-        transitionsBuilder: (_, animation, __, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 250),
-      ),
-    );
   }
 
   @override
@@ -111,7 +118,7 @@ class _MainShellState extends State<MainShell> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: _FreshlyNavBar(
+      bottomNavigationBar: _NourishNavBar(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
       ),
@@ -119,18 +126,18 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-class _FreshlyNavBar extends StatelessWidget {
+class _NourishNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  const _FreshlyNavBar({
+  const _NourishNavBar({
     required this.currentIndex,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = FreshlyApp.of(context).isDark;
+    final isDark = NourishApp.of(context).isDark;
     final bgColor = isDark ? AppColorsDark.background : AppColors.background;
 
     return Container(
@@ -146,33 +153,40 @@ class _FreshlyNavBar extends StatelessWidget {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _NavItem(
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home_rounded,
-                label: 'หน้าหลัก',
+                label: 'วันนี้',
                 isActive: currentIndex == 0,
                 onTap: () => onTap(0),
               ),
               _NavItem(
-                icon: Icons.menu_book_outlined,
-                activeIcon: Icons.menu_book_rounded,
-                label: 'สูตรอาหาร',
+                icon: Icons.bar_chart_outlined,
+                activeIcon: Icons.bar_chart_rounded,
+                label: 'สถิติ',
                 isActive: currentIndex == 1,
-                onTap: () => onTap(2),
+                onTap: () => onTap(1),
               ),
-              _ScanButton(onTap: () => onTap(1)),
+              _LogButton(onTap: () => onTap(2)),
               _NavItem(
-                icon: Icons.shopping_cart_outlined,
-                activeIcon: Icons.shopping_cart_rounded,
-                label: 'ช็อปปิ้ง',
+                icon: Icons.kitchen_outlined,
+                activeIcon: Icons.kitchen_rounded,
+                label: 'ตู้เย็น',
                 isActive: currentIndex == 2,
                 onTap: () => onTap(3),
               ),
-              _ThemeToggleButton(isDark: isDark),
+              _NavItemWithTheme(
+                icon: Icons.smart_toy_outlined,
+                activeIcon: Icons.smart_toy_rounded,
+                label: 'โค้ช',
+                isActive: currentIndex == 3,
+                onTap: () => onTap(4),
+                isDark: isDark,
+              ),
             ],
           ),
         ),
@@ -202,7 +216,7 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 64,
+        width: 56,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -231,18 +245,72 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _ScanButton extends StatelessWidget {
+/// Nav item that also acts as a theme toggle (for the Coach tab with a secondary action)
+class _NavItemWithTheme extends StatelessWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _NavItemWithTheme({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: () => NourishApp.of(context).toggleTheme(),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 56,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                isActive ? activeIcon : icon,
+                key: ValueKey(isActive),
+                color: isActive ? AppColors.primary : AppColors.textSecondary,
+                size: 26,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                color: isActive ? AppColors.primary : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LogButton extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _ScanButton({required this.onTap});
+  const _LogButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 60,
-        height: 60,
+        width: 58,
+        height: 58,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
@@ -259,49 +327,9 @@ class _ScanButton extends StatelessWidget {
           ],
         ),
         child: const Icon(
-          Icons.qr_code_scanner_rounded,
+          Icons.add_rounded,
           color: Colors.white,
-          size: 26,
-        ),
-      ),
-    );
-  }
-}
-
-class _ThemeToggleButton extends StatelessWidget {
-  final bool isDark;
-
-  const _ThemeToggleButton({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FreshlyApp.of(context).toggleTheme(),
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 64,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                isDark ? Icons.light_mode_rounded : Icons.dark_mode_outlined,
-                key: ValueKey(isDark),
-                color: AppColors.textSecondary,
-                size: 26,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              isDark ? 'สว่าง' : 'มืด',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
+          size: 30,
         ),
       ),
     );

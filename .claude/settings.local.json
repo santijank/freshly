@@ -3,7 +3,37 @@
     "allow": [
       "Bash(flutter --version)",
       "Bash(/c/flutter/bin/flutter --version)",
-      "Bash(/c/flutter/bin/flutter doctor:*)"
+      "Bash(/c/flutter/bin/flutter doctor:*)",
+      "Bash(git -C \"D:/freshly\" remote -v)",
+      "Bash(git -C \"D:/freshly\" remote set-url origin https://github.com/santijank/freshly.git)",
+      "Bash(git -C \"D:/freshly\" branch -M main)",
+      "Bash(git -C \"D:/freshly\" push -u origin main)",
+      "Bash(git -C \"D:/freshly\" add codemagic.yaml)",
+      "Bash(git -C \"D:/freshly\" commit -m \"Add codemagic.yaml for Android build\")",
+      "Bash(git -C \"D:/freshly\" push origin main)",
+      "Bash(git -C \"D:/freshly\" ls-files --others --exclude-standard ios/)",
+      "Bash(flutter create:*)",
+      "Bash(git -C \"D:/freshly\" commit -m \"Fix codemagic: Android only build\")",
+      "Bash(\"D:/freshly/android/gradle.properties\":*)",
+      "Bash(\"D:/freshly/android/gradle/wrapper/gradle-wrapper.properties\":*)",
+      "Bash(\"D:/freshly/android/app/src/main/AndroidManifest.xml\":*)",
+      "Bash(__NEW_LINE_5cc49e248200be63__ cat:*)",
+      "Bash(\"D:/freshly/android/app/src/main/kotlin/com/example/freshly/MainActivity.kt\":*)",
+      "Bash(\"D:/freshly/android/app/src/main/res/values/styles.xml\":*)",
+      "Bash(\"D:/freshly/android/app/src/main/res/drawable/launch_background.xml\":*)",
+      "Bash(git -C \"D:/freshly\" add android/)",
+      "Bash(git -C \"D:/freshly\" status)",
+      "Bash(git -C \"D:/freshly\" commit -m \"Add complete Android platform structure\")",
+      "Bash(git -C \"D:/freshly\" commit -m \"Fix Gradle: migrate to declarative plugins block\")",
+      "Bash(git -C \"D:/freshly\" add android/gradle/wrapper/gradle-wrapper.properties android/settings.gradle)",
+      "Bash(git -C \"D:/freshly\" commit -m \"Upgrade Gradle to 8.7 and AGP to 8.3.0\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(/c/flutter/bin/flutter.bat analyze:*)",
+      "Bash(/c/flutter/bin/flutter.bat pub:*)"
     ]
   }
 }

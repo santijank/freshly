@@ -149,7 +149,7 @@ class HomeScreen extends StatelessWidget {
                 icon: Icons.dark_mode_outlined,
                 color: AppColors.primary,
                 bgColor: AppColors.surface,
-                onTap: () => FreshlyApp.of(context).toggleTheme(),
+                onTap: () => NourishApp.of(context).toggleTheme(),
               ),
               const SizedBox(width: 8),
               _HeaderButton(

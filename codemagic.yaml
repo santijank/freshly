@@ -4,14 +4,19 @@ workflows:
     max_build_duration: 60
     environment:
       flutter: stable
+      groups:
+        - groq_secrets
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
       - name: Add Android platform
         script: |
           flutter create . --platforms android
+      - name: Inject API key
+        script: |
+          find lib -name "*.dart" -exec sed -i "s/__GROQ_API_KEY__/$GROQ_API_KEY/g" {} \;
       - name: Build APK
-        script: flutter build apk --release --no-tree-shake-icons --dart-define=GROQ_API_KEY=$GROQ_API_KEY
+        script: flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/**/outputs/**/*.apk
       - build/**/outputs/**/mapping.txt

@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/meal_log.dart';
 
 class NutritionAiService {
-  static const _apiKey = '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';
+  static const _apiKey = '__GROQ_API_KEY__';
   static const _endpoint = 'https://api.groq.com/openai/v1/chat/completions';
   static const _visionModel = 'meta-llama/llama-4-scout-17b-16e-instruct';
   static const _textModel = 'llama-3.3-70b-versatile';

@@ -12,7 +12,11 @@ workflows:
           flutter create . --platforms android
       - name: Inject API key
         script: |
-          find lib -name "*.dart" -exec sed -i "s/__GROQ_API_KEY__/$GROQ_API_KEY/g" {} \;
+          find lib -name "*.dart" | while read f; do
+            perl -i -pe "s/__GROQ_API_KEY__/$ENV{GROQ_API_KEY}/g" "$f"
+          done
+          echo "Injection complete. Checking..."
+          grep -r "GROQ_API_KEY" lib/ || echo "All replaced successfully"
       - name: Build APK
         script: flutter build apk --release --no-tree-shake-icons
     artifacts:

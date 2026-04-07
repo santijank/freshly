@@ -135,14 +135,12 @@ Always respond with valid JSON only — no markdown fences, no extra text.
   }
 
   List<MealItem> _parseItems(String content) {
-    // Strip markdown fences if present
     String cleaned = content.trim();
-    if (cleaned.startsWith('```')) {
-      final start = cleaned.indexOf('{');
-      final end = cleaned.lastIndexOf('}');
-      if (start != -1 && end != -1) {
-        cleaned = cleaned.substring(start, end + 1);
-      }
+    // Always extract the outermost { ... } regardless of surrounding text
+    final start = cleaned.indexOf('{');
+    final end = cleaned.lastIndexOf('}');
+    if (start != -1 && end != -1 && end > start) {
+      cleaned = cleaned.substring(start, end + 1);
     }
 
     final parsed = jsonDecode(cleaned) as Map<String, dynamic>;

@@ -767,24 +767,59 @@ class _AnalyzingSheetState extends State<_AnalyzingSheet> {
 
     if (_error != null) {
       return Container(
-        height: 300,
+        height: 320,
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('❌', style: TextStyle(fontSize: 48)),
-              const SizedBox(height: 12),
-              Text('เกิดข้อผิดพลาด'),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('ปิด'),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('❌', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            Text(
+              'วิเคราะห์ไม่สำเร็จ',
+              style: GoogleFonts.nunito(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error!.contains('401') ? 'API Key ไม่ถูกต้อง'
+                : _error!.contains('429') ? 'ส่งคำขอถี่เกินไป กรุณารอสักครู่'
+                : _error!.contains('timeout') ? 'หมดเวลาเชื่อมต่อ'
+                : 'กรุณาลองใหม่อีกครั้ง',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                color: isDark ? AppColorsDark.textSecondary : AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('ปิด', style: GoogleFonts.nunito()),
+                ),
+                const SizedBox(width: 12),
+                FilledButton(
+                  onPressed: () {
+                    setState(() => _error = null);
+                    _analyze();
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                  ),
+                  child: Text('ลองใหม่', style: GoogleFonts.nunito(color: Colors.white)),
+                ),
+              ],
+            ),
+          ],
         ),
       );
     }

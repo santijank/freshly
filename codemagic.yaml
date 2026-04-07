@@ -12,11 +12,23 @@ workflows:
           flutter create . --platforms android
       - name: Inject API key
         script: |
-          find lib -name "*.dart" | while read f; do
-            perl -i -pe "s/__GROQ_API_KEY__/$ENV{GROQ_API_KEY}/g" "$f"
-          done
-          echo "Injection complete. Checking..."
-          grep -r "GROQ_API_KEY" lib/ || echo "All replaced successfully"
+          python3 - <<'PYEOF'
+          import os, glob
+          key = os.environ.get('GROQ_API_KEY', '')
+          if not key:
+              print("ERROR: GROQ_API_KEY not set!")
+              exit(1)
+          count = 0
+          for f in glob.glob('lib/**/*.dart', recursive=True):
+              with open(f, 'r') as fh:
+                  content = fh.read()
+              if '__GROQ_API_KEY__' in content:
+                  with open(f, 'w') as fh:
+                      fh.write(content.replace('__GROQ_API_KEY__', key))
+                  print(f'Injected: {f}')
+                  count += 1
+          print(f'Done — {count} file(s) updated')
+          PYEOF
       - name: Build APK
         script: flutter build apk --release --no-tree-shake-icons
     artifacts:

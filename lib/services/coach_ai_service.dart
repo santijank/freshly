@@ -5,7 +5,7 @@ import '../models/health_store.dart';
 class CoachAiService {
   static const _apiKey = '__GROQ_API_KEY__';
   static const _endpoint = 'https://api.groq.com/openai/v1/chat/completions';
-  static const _model = 'llama-3.3-70b-versatile';
+  static const _model = 'llama-3.1-8b-instant';
 
   static const _systemPromptTemplate = '''
 You are Nourish AI Coach — a friendly Thai health and nutrition advisor.
@@ -56,24 +56,34 @@ Rules:
       'max_tokens': 1024,
     });
 
-    final response = await http.post(
-      Uri.parse(_endpoint),
-      headers: {
-        'Authorization': 'Bearer $_apiKey',
-        'Content-Type': 'application/json',
-      },
-      body: body,
-    );
+    for (int attempt = 0; attempt < 3; attempt++) {
+      final response = await http
+          .post(
+            Uri.parse(_endpoint),
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: body,
+          )
+          .timeout(const Duration(seconds: 30));
 
-    if (response.statusCode != 200) {
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        final content =
+            (decoded['choices'] as List).first['message']['content'] as String;
+        return content.trim();
+      }
+
+      if (response.statusCode == 429 && attempt < 2) {
+        await Future.delayed(Duration(seconds: 3 * (attempt + 1)));
+        continue;
+      }
+
       throw Exception(
           'Groq coach API error: ${response.statusCode} ${response.body}');
     }
-
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final content =
-        (decoded['choices'] as List).first['message']['content'] as String;
-    return content.trim();
+    throw Exception('Groq coach API error: 429 exceeded retries');
   }
 
   /// Generate a daily tip based on today's nutrition data.

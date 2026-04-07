@@ -7,7 +7,7 @@ class NutritionAiService {
   static const _apiKey = '__GROQ_API_KEY__';
   static const _endpoint = 'https://api.groq.com/openai/v1/chat/completions';
   static const _visionModel = 'meta-llama/llama-4-scout-17b-16e-instruct';
-  static const _textModel = 'llama-3.3-70b-versatile';
+  static const _textModel = 'llama-3.1-8b-instant';
 
   static const _imageSystemPrompt = '''
 You are a nutrition expert. Analyze food images and return accurate nutrition estimates.
@@ -93,45 +93,50 @@ Always respond with valid JSON only — no markdown fences, no extra text.
     return _parseItems(content);
   }
 
-  /// Analyze a text description using Groq LLaMA 3.3 70B text model.
+  /// Analyze a text description — auto-retry up to 3 times on 429.
   Future<List<MealItem>> analyzeText(String description) async {
     final userPrompt =
-        'User ate: $description\nEstimate nutrition for each food item mentioned.\nReturn ONLY valid JSON:\n{"items": [{"name": "...", "emoji": "...", "quantity": "...", "calories": 0, "protein": 0, "carbs": 0, "fat": 0}]}';
+        'Food: $description\nReturn ONLY JSON: {"items":[{"name":"ชื่อไทย","emoji":"🍚","quantity":"1 จาน","calories":0,"protein":0,"carbs":0,"fat":0}]}';
 
     final body = jsonEncode({
       'model': _textModel,
       'messages': [
-        {
-          'role': 'system',
-          'content': _textSystemPrompt,
-        },
-        {
-          'role': 'user',
-          'content': userPrompt,
-        },
+        {'role': 'system', 'content': 'Nutrition expert. Return valid JSON only, no markdown.'},
+        {'role': 'user', 'content': userPrompt},
       ],
       'temperature': 0.1,
-      'max_tokens': 1024,
+      'max_tokens': 512,
     });
 
-    final response = await http.post(
-      Uri.parse(_endpoint),
-      headers: {
-        'Authorization': 'Bearer $_apiKey',
-        'Content-Type': 'application/json',
-      },
-      body: body,
-    );
+    const maxRetries = 3;
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
+      final response = await http
+          .post(
+            Uri.parse(_endpoint),
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: body,
+          )
+          .timeout(const Duration(seconds: 30));
 
-    if (response.statusCode != 200) {
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        final content =
+            (decoded['choices'] as List).first['message']['content'] as String;
+        return _parseItems(content);
+      }
+
+      if (response.statusCode == 429 && attempt < maxRetries - 1) {
+        // Rate limited — wait and retry
+        await Future.delayed(Duration(seconds: 3 * (attempt + 1)));
+        continue;
+      }
+
       throw Exception('Groq text API error: ${response.statusCode} ${response.body}');
     }
-
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final content =
-        (decoded['choices'] as List).first['message']['content'] as String;
-
-    return _parseItems(content);
+    throw Exception('Groq text API error: 429 exceeded retries');
   }
 
   List<MealItem> _parseItems(String content) {

@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   camera: ^0.10.5+9
   permission_handler: ^11.3.0
   percent_indicator: ^4.2.3

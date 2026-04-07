@@ -836,6 +836,7 @@ class _ConfirmMealPage extends StatefulWidget {
 
 class _ConfirmMealPageState extends State<_ConfirmMealPage> {
   MealType _selectedType = MealType.lunch;
+  DateTime _selectedDate = DateTime.now();
   bool _saving = false;
 
   MealType _guessType() {
@@ -852,11 +853,26 @@ class _ConfirmMealPageState extends State<_ConfirmMealPage> {
     _selectedType = _guessType();
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now(),
+      locale: const Locale('th'),
+    );
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
+    final now = DateTime.now();
+    final date = DateTime(
+        _selectedDate.year, _selectedDate.month, _selectedDate.day,
+        now.hour, now.minute);
     final meal = MealLog(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      date: DateTime.now(),
+      id: now.millisecondsSinceEpoch.toString(),
+      date: date,
       mealType: _selectedType,
       items: widget.items,
       imagePath: widget.imagePath,
@@ -891,6 +907,11 @@ class _ConfirmMealPageState extends State<_ConfirmMealPage> {
                 _MealTypeSelector(
                   selected: _selectedType,
                   onChanged: (t) => setState(() => _selectedType = t),
+                ),
+                const SizedBox(height: 12),
+                _DatePickerRow(
+                  selectedDate: _selectedDate,
+                  onTap: _pickDate,
                 ),
                 const SizedBox(height: 20),
                 ...widget.items
@@ -952,6 +973,7 @@ class _ConfirmMealSheet extends StatefulWidget {
 
 class _ConfirmMealSheetState extends State<_ConfirmMealSheet> {
   MealType _selectedType = MealType.lunch;
+  DateTime _selectedDate = DateTime.now();
   bool _saving = false;
 
   MealType _guessType() {
@@ -968,11 +990,26 @@ class _ConfirmMealSheetState extends State<_ConfirmMealSheet> {
     _selectedType = _guessType();
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now(),
+      locale: const Locale('th'),
+    );
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
+    final now = DateTime.now();
+    final date = DateTime(
+        _selectedDate.year, _selectedDate.month, _selectedDate.day,
+        now.hour, now.minute);
     final meal = MealLog(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      date: DateTime.now(),
+      id: now.millisecondsSinceEpoch.toString(),
+      date: date,
       mealType: _selectedType,
       items: widget.items,
     );
@@ -1032,6 +1069,11 @@ class _ConfirmMealSheetState extends State<_ConfirmMealSheet> {
                   selected: _selectedType,
                   onChanged: (t) => setState(() => _selectedType = t),
                 ),
+                const SizedBox(height: 10),
+                _DatePickerRow(
+                  selectedDate: _selectedDate,
+                  onTap: _pickDate,
+                ),
               ],
             ),
           ),
@@ -1086,6 +1128,70 @@ class _ConfirmMealSheetState extends State<_ConfirmMealSheet> {
 }
 
 // ── Shared widgets ─────────────────────────────────────────────────
+
+class _DatePickerRow extends StatelessWidget {
+  final DateTime selectedDate;
+  final VoidCallback onTap;
+
+  const _DatePickerRow({required this.selectedDate, required this.onTap});
+
+  String get _label {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final sel = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final diff = today.difference(sel).inDays;
+    if (diff == 0) return 'วันนี้';
+    if (diff == 1) return 'เมื่อวาน';
+    return '${selectedDate.day}/${selectedDate.month}/${selectedDate.year + 543}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isToday = _label == 'วันนี้';
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isToday
+              ? AppColors.primary.withOpacity(0.08)
+              : Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isToday
+                ? AppColors.primary.withOpacity(0.3)
+                : Colors.orange.withOpacity(0.4),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.calendar_today_rounded,
+              size: 16,
+              color: isToday ? AppColors.primary : Colors.orange,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _label,
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isToday ? AppColors.primary : Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.arrow_drop_down_rounded,
+              size: 18,
+              color: isToday ? AppColors.primary : Colors.orange,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _MealTypeSelector extends StatelessWidget {
   final MealType selected;

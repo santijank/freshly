@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'models/fridge_store.dart';
 import 'models/health_store.dart';
 import 'models/meal_store.dart';
@@ -69,6 +70,12 @@ class _NourishAppState extends State<NourishApp> {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: _themeMode,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('th'), Locale('en')],
           routes: {
             '/main': (context) => const MainShell(),
             '/health': (context) => const HealthScreen(),

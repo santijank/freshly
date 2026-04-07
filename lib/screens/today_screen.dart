@@ -9,6 +9,7 @@ import '../models/meal_store.dart';
 import '../services/coach_ai_service.dart';
 import '../theme/app_theme.dart';
 import 'health_screen.dart';
+import 'profile_screen.dart';
 
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
@@ -258,22 +259,46 @@ class _TodayScreenState extends State<TodayScreen> {
     final dateStr =
         '${now.day} ${thaiMonths[now.month - 1]} ${now.year + 543}';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Text(
-          'สวัสดี ${name ?? 'คุณ'}! 🌿',
-          style: GoogleFonts.nunito(
-            fontSize: 26,
-            fontWeight: FontWeight.w800,
-            color: textPrimary,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'สวัสดี ${name ?? 'คุณ'}! 🌿',
+                style: GoogleFonts.nunito(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: textPrimary,
+                ),
+              ),
+              Text(
+                dateStr,
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
-        Text(
-          dateStr,
-          style: GoogleFonts.nunito(
-            fontSize: 14,
-            color: textSecondary,
+        GestureDetector(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProfileScreen()),
+          ),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              color: AppColors.primary,
+              size: 24,
+            ),
           ),
         ),
       ],

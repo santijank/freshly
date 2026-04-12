@@ -5,9 +5,9 @@ workflows:
     environment:
       flutter: stable
       vars:
-        KP1: "gsk_zjYZ5sH36WpkDK2r"
-        KP2: "WM0IWGdyb3FYwbfwYb"
-        KP3: "NYszRcaRJ6RuMTjoBd"
+        KP1: "gsk_aQXLicCriiRyeM"
+        KP2: "Hg1nAaWGdyb3FY0sPS"
+        KP3: "DyIb2TrEwNOjJ0JoHnso"
     scripts:
       - name: Get Flutter packages
         script: flutter pub get

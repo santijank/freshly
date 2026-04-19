@@ -873,6 +873,7 @@ class _ConfirmMealPageState extends State<_ConfirmMealPage> {
   MealType _selectedType = MealType.lunch;
   DateTime _selectedDate = DateTime.now();
   bool _saving = false;
+  late List<MealItem> _items;
 
   MealType _guessType() {
     final hour = DateTime.now().hour;
@@ -886,6 +887,7 @@ class _ConfirmMealPageState extends State<_ConfirmMealPage> {
   void initState() {
     super.initState();
     _selectedType = _guessType();
+    _items = List.from(widget.items);
   }
 
   Future<void> _pickDate() async {
@@ -909,7 +911,7 @@ class _ConfirmMealPageState extends State<_ConfirmMealPage> {
       id: now.millisecondsSinceEpoch.toString(),
       date: date,
       mealType: _selectedType,
-      items: widget.items,
+      items: _items,
       imagePath: widget.imagePath,
     );
     await MealStore.instance.addMeal(meal);
@@ -923,8 +925,7 @@ class _ConfirmMealPageState extends State<_ConfirmMealPage> {
 
   @override
   Widget build(BuildContext context) {
-    final total = widget.items
-        .fold(FoodNutrition.zero, (s, i) => s + i.nutrition);
+    final total = _items.fold(FoodNutrition.zero, (s, i) => s + i.nutrition);
 
     return Scaffold(
       appBar: AppBar(
@@ -950,7 +951,13 @@ class _ConfirmMealPageState extends State<_ConfirmMealPage> {
                 ),
                 const SizedBox(height: 20),
                 ...widget.items
-                    .map((item) => _MealItemTile(item: item)),
+                    .map((item) => _MealItemTile(
+                          item: item,
+                          onUpdated: (updated) => setState(() {
+                            final i = _items.indexWhere((e) => e.id == updated.id);
+                            if (i != -1) _items[i] = updated;
+                          }),
+                        )),
                 const SizedBox(height: 16),
                 _NutritionSummary(nutrition: total),
               ],
@@ -1010,6 +1017,7 @@ class _ConfirmMealSheetState extends State<_ConfirmMealSheet> {
   MealType _selectedType = MealType.lunch;
   DateTime _selectedDate = DateTime.now();
   bool _saving = false;
+  late List<MealItem> _items;
 
   MealType _guessType() {
     final hour = DateTime.now().hour;
@@ -1023,6 +1031,7 @@ class _ConfirmMealSheetState extends State<_ConfirmMealSheet> {
   void initState() {
     super.initState();
     _selectedType = _guessType();
+    _items = List.from(widget.items);
   }
 
   Future<void> _pickDate() async {
@@ -1061,8 +1070,7 @@ class _ConfirmMealSheetState extends State<_ConfirmMealSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColorsDark.cardBg : Colors.white;
-    final total = widget.items
-        .fold(FoodNutrition.zero, (s, i) => s + i.nutrition);
+    final total = _items.fold(FoodNutrition.zero, (s, i) => s + i.nutrition);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -1117,7 +1125,13 @@ class _ConfirmMealSheetState extends State<_ConfirmMealSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
                 const SizedBox(height: 16),
-                ...widget.items.map((item) => _MealItemTile(item: item)),
+                ..._items.map((item) => _MealItemTile(
+                      item: item,
+                      onUpdated: (updated) => setState(() {
+                        final i = _items.indexWhere((e) => e.id == updated.id);
+                        if (i != -1) _items[i] = updated;
+                      }),
+                    )),
                 const SizedBox(height: 16),
                 _NutritionSummary(nutrition: total),
               ],
@@ -1281,73 +1295,280 @@ class _MealTypeSelector extends StatelessWidget {
 
 class _MealItemTile extends StatelessWidget {
   final MealItem item;
+  final ValueChanged<MealItem>? onUpdated;
 
-  const _MealItemTile({required this.item});
+  const _MealItemTile({required this.item, this.onUpdated});
+
+  void _openEdit(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PortionEditSheet(
+        item: item,
+        onSaved: onUpdated,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColorsDark.surface : AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Text(item.emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: onUpdated != null ? () => _openEdit(context) : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? AppColorsDark.surface : AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: onUpdated != null
+              ? Border.all(color: AppColors.primary.withOpacity(0.15))
+              : null,
+        ),
+        child: Row(
+          children: [
+            Text(item.emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: GoogleFonts.nunito(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    item.quantity,
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: isDark ? AppColorsDark.textSecondary : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  item.name,
+                  '${item.nutrition.calories.round()} แคล',
                   style: GoogleFonts.nunito(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: isDark
-                        ? AppColorsDark.textPrimary
-                        : AppColors.textPrimary,
+                    color: AppColors.primary,
                   ),
                 ),
                 Text(
-                  item.quantity,
+                  'P${item.nutrition.protein.round()} C${item.nutrition.carbs.round()} F${item.nutrition.fat.round()}',
                   style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    color: isDark
-                        ? AppColorsDark.textSecondary
-                        : AppColors.textSecondary,
+                    fontSize: 11,
+                    color: isDark ? AppColorsDark.textSecondary : AppColors.textSecondary,
                   ),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${item.nutrition.calories.round()} แคล',
-                style: GoogleFonts.nunito(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
+            if (onUpdated != null) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.tune_rounded, size: 18, color: AppColors.primary.withOpacity(0.6)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Portion Edit Sheet ─────────────────────────────────────────────
+
+class _PortionEditSheet extends StatefulWidget {
+  final MealItem item;
+  final ValueChanged<MealItem>? onSaved;
+  const _PortionEditSheet({required this.item, this.onSaved});
+
+  @override
+  State<_PortionEditSheet> createState() => _PortionEditSheetState();
+}
+
+class _PortionEditSheetState extends State<_PortionEditSheet> {
+  double _multiplier = 1.0;
+
+  FoodNutrition get _scaled => FoodNutrition(
+        calories: widget.item.nutrition.calories * _multiplier,
+        protein: widget.item.nutrition.protein * _multiplier,
+        carbs: widget.item.nutrition.carbs * _multiplier,
+        fat: widget.item.nutrition.fat * _multiplier,
+      );
+
+  String get _portionLabel {
+    if (_multiplier == 0.25) return '¼ ส่วน';
+    if (_multiplier == 0.5) return '½ ส่วน';
+    if (_multiplier == 0.75) return '¾ ส่วน';
+    if (_multiplier == 1.0) return '1 ส่วน';
+    if (_multiplier == 1.5) return '1½ ส่วน';
+    if (_multiplier == 2.0) return '2 ส่วน';
+    if (_multiplier == 3.0) return '3 ส่วน';
+    return '${_multiplier.toStringAsFixed(2)}x';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppColorsDark.cardBg : Colors.white;
+    final textPrimary = isDark ? AppColorsDark.textPrimary : AppColors.textPrimary;
+    final textSecondary = isDark ? AppColorsDark.textSecondary : AppColors.textSecondary;
+    final scaled = _scaled;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20, right: 20, top: 12,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
               ),
-              Text(
-                'P${item.nutrition.protein.round()} C${item.nutrition.carbs.round()} F${item.nutrition.fat.round()}',
-                style: GoogleFonts.nunito(
-                  fontSize: 11,
-                  color: isDark
-                      ? AppColorsDark.textSecondary
-                      : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Text(widget.item.emoji, style: const TextStyle(fontSize: 28)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.item.name,
+                  style: GoogleFonts.nunito(
+                    fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          // Portion selector
+          Text(
+            'ปรับปริมาณที่กิน',
+            style: GoogleFonts.nunito(fontSize: 13, color: textSecondary),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0].map((v) {
+              final sel = (_multiplier - v).abs() < 0.01;
+              String label = v == 0.25 ? '¼' : v == 0.5 ? '½' : v == 0.75 ? '¾'
+                  : v == 1.5 ? '1½' : v.toStringAsFixed(0);
+              return GestureDetector(
+                onTap: () => setState(() => _multiplier = v),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: sel ? AppColors.primary : AppColors.primary.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: GoogleFonts.nunito(
+                        fontSize: 13, fontWeight: FontWeight.w700,
+                        color: sel ? Colors.white : AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _portionLabel,
+            style: GoogleFonts.nunito(
+              fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Nutrition preview
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _NutrChip(label: 'แคลอรี่', value: '${scaled.calories.round()}'),
+                _NutrChip(label: 'โปรตีน', value: '${scaled.protein.round()}g'),
+                _NutrChip(label: 'คาร์บ', value: '${scaled.carbs.round()}g'),
+                _NutrChip(label: 'ไขมัน', value: '${scaled.fat.round()}g'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () {
+                final updated = MealItem(
+                  id: widget.item.id,
+                  name: widget.item.name,
+                  emoji: widget.item.emoji,
+                  quantity: '$_portionLabel ของ ${widget.item.quantity}',
+                  nutrition: scaled,
+                );
+                widget.onSaved?.call(updated);
+                Navigator.of(context).pop();
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Text(
+                'ยืนยัน',
+                style: GoogleFonts.nunito(
+                  fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _NutrChip extends StatelessWidget {
+  final String label;
+  final String value;
+  const _NutrChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(value, style: GoogleFonts.nunito(
+          fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white,
+        )),
+        Text(label, style: GoogleFonts.nunito(fontSize: 11, color: Colors.white70)),
+      ],
     );
   }
 }
